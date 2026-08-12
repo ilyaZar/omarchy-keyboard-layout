@@ -279,7 +279,7 @@ Panel {
     if (!root.bar || root.keyboardNames.length === 0) return
 
     var commands = root.keyboardNames.map(function(name) {
-      return "hyprctl switchxkblayout " + Util.shellQuote(name)
+      return "hyprctl switchxkblayout -- " + Util.shellQuote(name)
         + " " + Util.shellQuote(target)
     })
     root.bar.run(commands.join("; "))
