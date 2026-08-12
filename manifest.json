@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.ilyazar.keyboard-layout",
   "name": "Keyboard Layout Pulse",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": "ilyaZar",
   "license": "MIT",
   "description": "Pulsing keyboard layout (XKB) indicator and native picker for Omarchy.",
