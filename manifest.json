@@ -17,35 +17,7 @@
     "description": "Show and select the current physical keyboard layout.",
     "category": "Compositor",
     "allowMultiple": false,
-    "defaultSection": "center",
-    "defaults": {
-      "animation": true,
-      "pulseColor": "#2aa198",
-      "showSingleLayout": false
-    },
-    "schema": [
-      {
-        "key": "animation",
-        "type": "boolean",
-        "label": "Animation",
-        "defaultValue": true,
-        "description": "Animate and color the layout label after a change."
-      },
-      {
-        "key": "pulseColor",
-        "type": "string",
-        "label": "Pulse color",
-        "defaultValue": "#2aa198",
-        "description": "Hex color used when the keyboard layout changes."
-      },
-      {
-        "key": "showSingleLayout",
-        "type": "boolean",
-        "label": "Show with one layout",
-        "defaultValue": false,
-        "description": "Keep the widget visible when one layout is configured."
-      }
-    ]
+    "defaultSection": "center"
   },
   "omarchy": {
     "clonedFrom": "omarchy.keyboard-layout"

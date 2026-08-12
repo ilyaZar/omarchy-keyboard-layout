@@ -21,12 +21,15 @@ Panel {
   ]
   readonly property string keyboardConfigPath:
     Quickshell.env("HOME") + "/.config/hypr/input.lua"
+  readonly property string settingsPath:
+    Quickshell.env("HOME") + "/.config/omarchy/plugins/"
+      + moduleName + "/.settings.json"
   readonly property string pulseColor: normalizedPulseColor(
-    setting("pulseColor", tealColor))
+    savedSetting("pulseColor", tealColor))
   readonly property bool animationEnabled:
-    setting("animation", true) !== false
+    savedSetting("animation", true) !== false
   readonly property bool showSingleLayout:
-    setting("showSingleLayout", false) === true
+    savedSetting("showSingleLayout", false) === true
   readonly property color urgent: bar ? bar.urgent : Color.urgent
   readonly property string shortcutDescription:
     describeGroupOption(groupOptionFrom(effectiveKeyboardOptions))
@@ -49,6 +52,22 @@ Panel {
   property bool multipleLayouts: true
   property real pulseOpacity: 1
   property real pulseScale: 1
+  property var savedSettings: ({})
+
+  function savedSetting(name, fallback) {
+    var value = root.savedSettings[name]
+    return value === undefined || value === null ? fallback : value
+  }
+
+  function loadSettings(raw) {
+    try {
+      var value = JSON.parse(raw || "{}")
+      root.savedSettings = value && typeof value === "object"
+        && !Array.isArray(value) ? value : ({})
+    } catch (error) {
+      root.savedSettings = ({})
+    }
+  }
 
   function isPulseColor(value) {
     return /^#[0-9a-fA-F]{6}$/.test(String(value || "").trim())
@@ -101,15 +120,13 @@ Panel {
   }
 
   function persistSettings(values) {
-    var entry = { id: root.moduleName }
-    for (var existing in root.settings)
-      if (existing !== "id") entry[existing] = root.settings[existing]
-    for (var key in values) entry[key] = values[key]
+    var next = {}
+    for (var existing in root.savedSettings)
+      next[existing] = root.savedSettings[existing]
+    for (var key in values) next[key] = values[key]
 
-    root.settings = entry
-    if (root.bar && root.bar.shell
-        && typeof root.bar.shell.updateEntryInline === "function")
-      root.bar.shell.updateEntryInline(root.moduleName, entry)
+    root.savedSettings = next
+    settingsFile.setText(JSON.stringify(next, null, 2) + "\n")
   }
 
   function setPulseColor(value) {
@@ -321,7 +338,10 @@ Panel {
 
   onAnimationEnabledChanged: if (!animationEnabled) resetPulse()
 
-  Component.onCompleted: refresh()
+  Component.onCompleted: {
+    settingsFile.reload()
+    refresh()
+  }
 
   Connections {
     target: Hyprland
@@ -364,6 +384,17 @@ Panel {
       waitForEnd: true
       onStreamFinished: root.updateKeyboardOptions(text)
     }
+  }
+
+  FileView {
+    id: settingsFile
+    path: root.settingsPath
+    watchChanges: true
+    atomicWrites: true
+    printErrors: false
+    onLoaded: root.loadSettings(text())
+    onLoadFailed: root.loadSettings("")
+    onFileChanged: reload()
   }
 
   FileView {

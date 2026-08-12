@@ -68,6 +68,8 @@ remain owned by Omarchy and Hyprland.
 omarchy plugin remove io.github.ilyazar.keyboard-layout --yes
 ```
 
+Removal also deletes the plugin's saved appearance and visibility preferences.
+
 ## License
 
 MIT
