@@ -34,6 +34,14 @@ position.
 - Open **Settings** from the language menu to customize the widget.
 - Enable **Show with one layout** to keep the widget visible with one layout.
 
+## Demo
+
+See layouts change using the bar and keyboard shortcuts, choose a pulse color,
+add languages, and change the switching shortcut from double `Ctrl` to double
+`Alt`.
+
+<https://github.com/user-attachments/assets/9e631b8e-f155-45d1-9731-567414712d6a>
+
 ## Animation and color
 
 Animation is enabled by default. After a layout change, the label pulses using
