@@ -255,7 +255,6 @@ Panel {
     })
     root.bar.run(commands.join("; "))
     refreshTimer.restart()
-    layoutShortcut.refresh()
   }
 
   function cycle(direction) {
@@ -289,6 +288,7 @@ Panel {
     root.cursorIndex = root.activeLayoutIndex
     root.cursorActive = false
     root.refresh()
+    layoutShortcut.refresh()
   }
 
   onAnimationEnabledChanged: if (!animationEnabled) resetPulse()
