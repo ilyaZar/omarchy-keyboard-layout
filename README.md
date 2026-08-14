@@ -9,9 +9,12 @@ layout change to improve visual confirmation of the layout change.
 ## Requirements
 
 - Omarchy Quattro: >= 4.0.0
+- x86-64 for optional per-window layouts
+- `json-c` for optional per-window layouts, included with Omarchy
 - One or more keyboard layouts configured in `~/.config/hypr/input.lua`
 
-No additional packages or background services are required.
+The optional per-window mode runs a bundled helper only while it is enabled.
+It does not install a system service.
 
 ## Install
 
@@ -62,13 +65,19 @@ Use the gear beside the displayed shortcut to open its owning line in
 The plugin never rewrites the Hyprland input file. Layout and keybinding changes
 remain owned by Omarchy and Hyprland.
 
+Enable **Activate per-window layouts** to remember the active layout separately
+for each open window. Disabling it stops the bundled helper and returns to one
+layout shared across windows. Automatic restores do not trigger the pulse, so
+the animation continues to identify manual layout changes.
+
 ## Remove
 
 ```bash
 omarchy plugin remove io.github.ilyazar.keyboard-layout --yes
 ```
 
-Removal also deletes the plugin's saved appearance and visibility preferences.
+Removal also deletes the plugin's saved appearance, visibility, and per-window
+preferences.
 
 ## License
 

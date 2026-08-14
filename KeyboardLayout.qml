@@ -22,15 +22,20 @@ Panel {
   ]
   readonly property string keyboardConfigPath:
     Quickshell.env("HOME") + "/.config/hypr/input.lua"
+  readonly property string pluginPath:
+    Quickshell.env("HOME") + "/.config/omarchy/plugins/" + moduleName
   readonly property string settingsPath:
-    Quickshell.env("HOME") + "/.config/omarchy/plugins/"
-      + moduleName + "/.settings.json"
+    pluginPath + "/.settings.json"
+  readonly property string trackerPath:
+    pluginPath + "/native/keyboard-layoutd"
   readonly property string pulseColor: normalizedPulseColor(
     savedSetting("pulseColor", tealColor))
   readonly property bool animationEnabled:
     savedSetting("animation", true) !== false
   readonly property bool showSingleLayout:
     savedSetting("showSingleLayout", false) === true
+  readonly property bool perWindowLayouts:
+    savedSetting("perWindowLayouts", false) === true
   readonly property color urgent: bar ? bar.urgent : Color.urgent
   property bool settingsPage: false
   property bool customColorEditorVisible: false
@@ -49,6 +54,7 @@ Panel {
   property bool multipleLayouts: true
   property real pulseOpacity: 1
   property real pulseScale: 1
+  property int automaticRestoreLayout: -1
   property var savedSettings: ({})
 
   function savedSetting(name, fallback) {
@@ -120,6 +126,30 @@ Panel {
   function setShowSingleLayout(enabled) {
     persistSettings({ showSingleLayout: enabled })
     if (!enabled && !root.multipleLayouts) root.close()
+  }
+
+  function setPerWindowLayouts(enabled) {
+    persistSettings({ perWindowLayouts: enabled })
+    syncLayoutTracker()
+  }
+
+  function syncLayoutTracker() {
+    if (root.perWindowLayouts) {
+      if (!layoutTracker.running) layoutTracker.running = true
+      return
+    }
+
+    trackerRestartTimer.stop()
+    automaticRestoreTimer.stop()
+    root.automaticRestoreLayout = -1
+    if (layoutTracker.running) layoutTracker.running = false
+  }
+
+  function expectAutomaticRestore(line) {
+    var match = String(line || "").trim().match(/^restore:([0-9]+)$/)
+    if (!match) return
+    root.automaticRestoreLayout = Number(match[1])
+    automaticRestoreTimer.restart()
   }
 
   function selectPresetColor(value) {
@@ -234,11 +264,19 @@ Panel {
       ? String(nextLayouts[root.activeLayoutIndex]).toUpperCase()
       : root.layoutFull.split(/\s+/)[0].substring(0, 3).toUpperCase()
     var changed = root.layoutLabel !== "" && root.layoutLabel !== nextLabel
+    var automatic = changed
+      && root.automaticRestoreLayout === root.activeLayoutIndex
 
     root.layouts = nextLayouts
     root.layoutLabel = nextLabel
     root.multipleLayouts = nextLayouts.length > 1
-    if (changed && root.animationEnabled) pulseAnimation.restart()
+    if (automatic) {
+      automaticRestoreTimer.stop()
+      root.automaticRestoreLayout = -1
+      resetPulse()
+    } else if (changed && root.animationEnabled) {
+      pulseAnimation.restart()
+    }
   }
 
   function refresh() {
@@ -292,6 +330,7 @@ Panel {
   }
 
   onAnimationEnabledChanged: if (!animationEnabled) resetPulse()
+  onPerWindowLayoutsChanged: syncLayoutTracker()
 
   Component.onCompleted: {
     settingsFile.reload()
@@ -336,6 +375,23 @@ Panel {
     }
   }
 
+  Process {
+    id: layoutTracker
+    command: [
+      "setpriv",
+      "--pdeathsig",
+      "TERM",
+      root.trackerPath
+    ]
+    stdout: SplitParser {
+      onRead: function(line) { root.expectAutomaticRestore(line) }
+    }
+    onExited: {
+      root.automaticRestoreLayout = -1
+      if (root.perWindowLayouts) trackerRestartTimer.restart()
+    }
+  }
+
   FileView {
     id: settingsFile
     path: root.settingsPath
@@ -359,6 +415,18 @@ Panel {
     id: refreshTimer
     interval: 600
     onTriggered: root.refresh()
+  }
+
+  Timer {
+    id: trackerRestartTimer
+    interval: 1000
+    onTriggered: root.syncLayoutTracker()
+  }
+
+  Timer {
+    id: automaticRestoreTimer
+    interval: 1500
+    onTriggered: root.automaticRestoreLayout = -1
   }
 
   Timer {
@@ -751,6 +819,47 @@ Panel {
                 text: root.showSingleLayout
                   ? "Hide when only one layout is configured"
                   : "Keep visible when only one layout is configured"
+                fontFamily: root.bar.fontFamily
+              }
+            }
+          }
+
+          Item {
+            width: parent.width
+            implicitHeight: Math.max(
+              perWindowHeader.implicitHeight,
+              perWindowToggle.implicitHeight)
+
+            PanelSectionHeader {
+              id: perWindowHeader
+              anchors.left: parent.left
+              anchors.right: perWindowToggle.left
+              anchors.rightMargin: Style.space(6)
+              anchors.verticalCenter: parent.verticalCenter
+              text: "Activate per-window layouts"
+              elide: Text.ElideRight
+              foreground: root.bar.foreground
+              fontFamily: root.bar.fontFamily
+            }
+
+            ToggleSwitch {
+              id: perWindowToggle
+              anchors.right: parent.right
+              anchors.verticalCenter: perWindowHeader.verticalCenter
+              anchors.verticalCenterOffset: Math.round(
+                perWindowHeader.topPadding / 2)
+              trackHeight: Math.round(
+                perWindowHeader.font.pixelSize * 1.2)
+              cursorPad: Style.space(3)
+              checked: root.perWindowLayouts
+              foreground: root.bar.foreground
+              onToggled: root.setPerWindowLayouts(!checked)
+
+              PanelToolTip {
+                visible: perWindowToggle.containsMouse
+                text: root.perWindowLayouts
+                  ? "Use one layout across all windows"
+                  : "Remember the layout used in each window"
                 fontFamily: root.bar.fontFamily
               }
             }
