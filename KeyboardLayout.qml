@@ -639,7 +639,9 @@ Panel {
               PanelSectionHeader {
                 id: animationToggleLabel
                 text: "Animation"
-                foreground: root.bar.foreground
+                foreground: root.animationEnabled
+                  ? root.bar.foreground
+                  : Color.muted
                 fontFamily: root.bar.fontFamily
                 anchors.verticalCenter: parent.verticalCenter
               }
@@ -797,7 +799,9 @@ Panel {
               anchors.left: parent.left
               anchors.verticalCenter: parent.verticalCenter
               text: "Show with one layout"
-              foreground: root.bar.foreground
+              foreground: root.showSingleLayout
+                ? root.bar.foreground
+                : Color.muted
               fontFamily: root.bar.fontFamily
             }
 
@@ -838,7 +842,9 @@ Panel {
               anchors.verticalCenter: parent.verticalCenter
               text: "Activate per-window layouts"
               elide: Text.ElideRight
-              foreground: root.bar.foreground
+              foreground: root.perWindowLayouts
+                ? root.bar.foreground
+                : Color.muted
               fontFamily: root.bar.fontFamily
             }
 
