@@ -4,6 +4,7 @@ import Quickshell.Hyprland
 import Quickshell.Io
 import qs.Commons
 import qs.Ui
+import "lib/shortcuts" as Shortcuts
 
 Panel {
   id: root
@@ -31,12 +32,8 @@ Panel {
   readonly property bool showSingleLayout:
     savedSetting("showSingleLayout", false) === true
   readonly property color urgent: bar ? bar.urgent : Color.urgent
-  readonly property string shortcutDescription:
-    describeGroupOption(groupOptionFrom(effectiveKeyboardOptions))
   property bool settingsPage: false
   property bool customColorEditorVisible: false
-  property string effectiveKeyboardOptions: ""
-  property string xkbOptionDescriptions: ""
   property int keyboardOptionsLine: 1
 
   property string keyboardName: ""
@@ -84,39 +81,6 @@ Panel {
       || color === yellowColor
       ? color
       : "custom"
-  }
-
-  function groupOptionFrom(options) {
-    return String(options || "").split(",").map(function(option) {
-      return option.trim()
-    }).find(function(option) {
-      return option.startsWith("grp:")
-    }) || ""
-  }
-
-  function friendlyXkbDescription(value) {
-    return String(value || "")
-      .replace(/\bBoth Alts together\b/g, "Both Alt keys")
-      .replace(/\bBoth Ctrls together\b/g, "Both Ctrl keys")
-      .replace(/\bBoth Shifts together\b/g, "Both Shift keys")
-      .replace(/\bWin\b/g, "Super")
-      .replace(/\s*\+\s*/g, " + ")
-  }
-
-  function describeGroupOption(option) {
-    if (!option) return "Not configured"
-
-    var lines = root.xkbOptionDescriptions.split("\n")
-    for (var index = 0; index < lines.length; index++) {
-      var match = lines[index].match(/^\s*(grp:\S+)\s+(.+)$/)
-      if (match && match[1] === option)
-        return friendlyXkbDescription(match[2])
-    }
-
-    return option
-      .substring(4)
-      .replace(/_toggle(?:_bidir)?$/, "")
-      .replace(/_/g, " ")
   }
 
   function persistSettings(values) {
@@ -171,15 +135,6 @@ Panel {
       customColorField.selectAll()
       customColorField.forceActiveFocus()
     })
-  }
-
-  function updateKeyboardOptions(raw) {
-    try {
-      root.effectiveKeyboardOptions
-        = String(JSON.parse(raw || "{}").str || "")
-    } catch (error) {
-      root.effectiveKeyboardOptions = ""
-    }
   }
 
   function updateKeyboardConfig(raw) {
@@ -289,7 +244,6 @@ Panel {
   function refresh() {
     if (!queryProcess.running) queryProcess.running = true
     if (!layoutProcess.running) layoutProcess.running = true
-    if (!optionsProcess.running) optionsProcess.running = true
   }
 
   function switchLayouts(target) {
@@ -301,6 +255,7 @@ Panel {
     })
     root.bar.run(commands.join("; "))
     refreshTimer.restart()
+    layoutShortcut.refresh()
   }
 
   function cycle(direction) {
@@ -343,6 +298,10 @@ Panel {
     refresh()
   }
 
+  Shortcuts.XkbGroupOption {
+    id: layoutShortcut
+  }
+
   Connections {
     target: Hyprland
     function onRawEvent(event) {
@@ -377,15 +336,6 @@ Panel {
     }
   }
 
-  Process {
-    id: optionsProcess
-    command: ["hyprctl", "-j", "getoption", "input:kb_options"]
-    stdout: StdioCollector {
-      waitForEnd: true
-      onStreamFinished: root.updateKeyboardOptions(text)
-    }
-  }
-
   FileView {
     id: settingsFile
     path: root.settingsPath
@@ -395,12 +345,6 @@ Panel {
     onLoaded: root.loadSettings(text())
     onLoadFailed: root.loadSettings("")
     onFileChanged: reload()
-  }
-
-  FileView {
-    path: "/usr/share/X11/xkb/rules/evdev.lst"
-    printErrors: false
-    onLoaded: root.xkbOptionDescriptions = text()
   }
 
   FileView {
@@ -751,7 +695,7 @@ Panel {
               anchors.right: editShortcutButton.left
               anchors.rightMargin: Style.space(6)
               anchors.verticalCenter: parent.verticalCenter
-              text: root.shortcutDescription
+              text: layoutShortcut.label
               color: root.bar.foreground
               font.family: root.bar.fontFamily
               font.pixelSize: Style.font.bodySmall
