@@ -212,16 +212,11 @@ Panel {
     })
     var typing = physical.filter(function(keyboard) {
       var name = String(keyboard.name)
+      // Hotkey-only devices do not follow layout group switches.
       return !name.endsWith("-system-control")
         && !name.endsWith("-consumer-control")
         && name !== "video-bus"
         && !name.startsWith("power-button")
-        // Vendor hotkey blocks exposed as keyboards (Lenovo
-        // "ideapad-extra-buttons", Asus/Dell "*-wmi-hotkeys"). Hyprland lists
-        // them under `keyboards` and they inherit kb_layout, but they never
-        // receive the group switch from grp:*_toggle, so their active_keymap
-        // stays frozen on whatever was active when they appeared. Picking one
-        // leaves the indicator permanently out of sync.
         && !name.endsWith("-extra-buttons")
         && !name.endsWith("-wmi-hotkeys")
     })
@@ -355,26 +350,11 @@ Panel {
       if (!event) return
       var name = String(event.name || "")
       if (name.indexOf("activelayout") !== -1) {
-        // Adopt the device the event came from. Only the keyboard actually
-        // being typed on emits activelayout, so this is the reliable signal
-        // for which device the indicator should track. Without it,
-        // selectKeyboard falls through to typing[0] whenever no physical
-        // keyboard is flagged `main` -- which happens when an input method
-        // (fcitx5, ibus) owns the main virtual keyboard -- and typing[0] can
-        // be a vendor hotkey block that never changes layout.
-        //
-        // Payload is `DEVICE,LAYOUT`; split on the FIRST comma only, because
-        // layout descriptions contain commas, e.g.
-        // "English (US, intl., with dead keys)".
-        var data = String(event.data || "")
-        var comma = data.indexOf(",")
-        var device = comma === -1 ? data : data.substring(0, comma)
-        if (device && device.indexOf("hl-virtual-keyboard") !== 0)
+        var device = String(event.data || "").split(",")[0]
+        if (device && !device.startsWith("hl-virtual-keyboard"))
           root.keyboardName = device
-        root.refresh()
-      } else if (name === "configreloaded") {
-        root.refresh()
-      }
+      } else if (name !== "configreloaded") return
+      root.refresh()
     }
   }
 
